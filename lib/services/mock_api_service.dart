@@ -14,6 +14,8 @@ class MockApiService {
     familyId: "",
     role: UserRole.admin,
     token: "mock-token-123",
+    accounts: [],
+    goals: [],
   );
 
 

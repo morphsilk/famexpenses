@@ -34,6 +34,10 @@ class _LoginScreenState extends State<LoginScreen> {
           _passwordController.text,
         );
 
+        if (user.token == null) {
+          throw Exception("Ошибка: токен не был получен");
+        }
+
         await storage.write(key: 'auth_token', value: user.token!);
 
         Navigator.pushReplacement(
@@ -41,7 +45,7 @@ class _LoginScreenState extends State<LoginScreen> {
           MaterialPageRoute(
             builder: (_) => MainNavigation(
               family: Family(
-                id: user.familyId,
+                id: user.familyId.isEmpty ? "default-family" : user.familyId,
                 name: "Семья ${user.name}",
                 users: [user],
               ),

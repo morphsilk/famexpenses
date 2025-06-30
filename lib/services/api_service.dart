@@ -14,6 +14,9 @@ class ApiService {
     password: "pavel123",
     familyId: "",
     role: UserRole.admin,
+    token: "mock-token-123",
+    accounts: [],
+    goals: [],
   );
 
   static Future<void> _simulateNetworkDelay() async {
