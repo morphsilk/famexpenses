@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'dart:io'; // Добавляем для SocketException
 import '../models/user.dart';
 import '../models/family.dart';
 import 'main_navigation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../services/api_service.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -10,54 +13,55 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  String _email = '';
-  String _password = '';
-  static List<User> _registeredUsers = []; // Временное хранилище
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final storage = FlutterSecureStorage(); // Инициализация хранилища
+  bool _isLoading = false; // Добавляем переменную состояния загрузки
 
-  void _login() {
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _login() async {
     if (_formKey.currentState!.validate()) {
-      _formKey.currentState!.save();
-      final user = _registeredUsers.firstWhere(
-            (u) => u.email == _email && u.password == _password,
-        orElse: () => User(name: '', email: '', password: '', familyId: '', role: UserRole.adult),
-      );
-      if (user.email.isNotEmpty) {
-        print('Вход успешен: ${user.toJson()}');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Вход успешен!')),
+      setState(() => _isLoading = true);
+      try {
+        final user = await ApiService.login(
+          _emailController.text,
+          _passwordController.text,
         );
-        // Собираем семью из всех пользователей с таким же familyId
-        final family = Family(
-          id: user.familyId,
-          name: "Семья ${user.name}",
-          users: _registeredUsers.where((u) => u.familyId == user.familyId).toList(),
-        );
+
+        await storage.write(key: 'auth_token', value: user.token!);
+
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => MainNavigation(family: family),
+            builder: (_) => MainNavigation(
+              family: Family(
+                id: user.familyId,
+                name: "Семья ${user.name}",
+                users: [user],
+              ),
+            ),
           ),
         );
-      } else {
+      } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Неверный email или пароль')),
+          SnackBar(content: Text(e.toString())),
         );
+      } finally {
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
       }
     }
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final newUser = ModalRoute.of(context)?.settings.arguments as User?;
-    if (newUser != null && !_registeredUsers.any((u) => u.email == newUser.email)) {
-      _registeredUsers.add(newUser);
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    // Без изменений
     return Scaffold(
       appBar: AppBar(title: Text('Вход')),
       body: Padding(
@@ -68,27 +72,29 @@ class _LoginScreenState extends State<LoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               TextFormField(
+                controller: _emailController,
                 decoration: InputDecoration(labelText: 'Email'),
                 keyboardType: TextInputType.emailAddress,
                 validator: (value) => !RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value!)
                     ? 'Введите корректный email'
                     : null,
-                onSaved: (value) => _email = value!,
               ),
               TextFormField(
+                controller: _passwordController,
                 decoration: InputDecoration(labelText: 'Пароль'),
                 obscureText: true,
                 validator: (value) =>
                 value!.isEmpty ? 'Введите пароль' : null,
-                onSaved: (value) => _password = value!,
               ),
               SizedBox(height: 20),
               ElevatedButton(
-                onPressed: _login,
-                child: Text('Войти'),
+                onPressed: _isLoading ? null : _login,
+                child: _isLoading
+                    ? CircularProgressIndicator()
+                    : Text('Войти'),
               ),
               TextButton(
-                onPressed: () => Navigator.pushReplacementNamed(context, '/register'),
+                onPressed: _isLoading ? null : () => Navigator.pushNamed(context, '/register'),
                 child: Text('Нет аккаунта? Зарегистрироваться'),
               ),
             ],

@@ -1,4 +1,3 @@
-// lib/models/expense_category.dart
 import 'package:flutter/material.dart';
 import 'category.dart';
 

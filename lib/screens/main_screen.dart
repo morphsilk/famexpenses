@@ -9,6 +9,7 @@ import '../models/family.dart';
 import 'add_account_screen.dart';
 import 'analytics_screen.dart';
 import 'goals_budget_screen.dart';
+import 'family_management_screen.dart';
 import 'profile_screen.dart';
 
 class MainScreen extends StatefulWidget {
@@ -17,6 +18,7 @@ class MainScreen extends StatefulWidget {
   final void Function(Account)? onAddAccount;
   final Family family; // Добавляем family
   final User currentUser; // Добавляем currentUser
+  final VoidCallback? onManageFamily;
 
   MainScreen({
     required this.accounts,
@@ -24,6 +26,7 @@ class MainScreen extends StatefulWidget {
     required this.onAddAccount,
     required this.family,
     required this.currentUser,
+    this.onManageFamily,
   });
 
   @override
@@ -361,6 +364,20 @@ class _MainScreenState extends State<MainScreen> {
         builder: (context) => ProfileScreen(
           family: widget.family,
           currentUser: widget.currentUser,
+          accounts: widget.accounts,
+          onRemoveFamilyMember: (user) {
+            setState(() {
+              widget.family.users.removeWhere((u) => u.email == user.email);
+            });
+          },
+          onUpdateRole: (user, newRole) {
+            setState(() {
+              final index = widget.family.users.indexWhere((u) => u.email == user.email);
+              if (index != -1) {
+                widget.family.users[index] = user.copyWith(role: newRole);
+              }
+            });
+          },
         ),
       ),
     );
@@ -370,11 +387,45 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Семейные финансы'),
+        title: Text('Расходы семьи'),
         actions: [
+          if (widget.currentUser.role == UserRole.admin)
+            IconButton(
+              icon: Icon(Icons.group),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => FamilyManagementScreen(
+                      familyUsers: widget.family.users,
+                      onAddFamilyMember: (newUser) {
+                        setState(() {
+                          widget.family.users.add(newUser);
+                        });
+                      },
+                      onRemoveFamilyMember: (user) {
+                        setState(() {
+                          widget.family.users.removeWhere((u) => u.email == user.email);
+                        });
+                      },
+                      onUpdateRole: (user, newRole) {
+                        setState(() {
+                          final index = widget.family.users.indexWhere((u) => u.email == user.email);
+                          if (index != -1) {
+                            widget.family.users[index] = user.copyWith(role: newRole);
+                          }
+                        });
+                      },
+                    ),
+                  ),
+                );
+              },
+              tooltip: 'Управление семьёй',
+            ),
           IconButton(
             icon: Icon(Icons.person),
             onPressed: () => _showProfile(context),
+            tooltip: 'Профиль',
           ),
         ],
       ),
