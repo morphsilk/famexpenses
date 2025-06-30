@@ -1,11 +1,11 @@
 import 'dart:convert';
-import 'dart:io'; // Импорт для SocketException
+import 'dart:io';
 import 'dart:async';
 import 'package:http/http.dart' as http;
 import '../models/user.dart';
 
 class ApiService {
-  static const String _baseUrl = 'http://10.0.2.2:5000';
+  static const String _baseUrl = 'http://192.168.0.2';
   static Future<void> testConnection() async {
     try {
       final response = await http.get(
