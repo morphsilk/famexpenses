@@ -5,8 +5,28 @@ import 'package:http/http.dart' as http;
 import '../models/user.dart';
 
 class ApiService {
+  static const bool useMock = true;
   static const String _baseUrl = 'http://172.20.10.2';
+
+  static final User _mockUser = User(
+    name: "Павел",
+    email: "test@test.com",
+    password: "123456",
+    familyId: "",
+    role: UserRole.admin,
+  );
+
+  static Future<void> _simulateNetworkDelay() async {
+    await Future.delayed(const Duration(seconds: 1));
+  }
+
   static Future<void> testConnection() async {
+    if (useMock) {
+      await _simulateNetworkDelay();
+      print('[MOCK] Connection test successful');
+      return;
+    }
+
     try {
       final response = await http.get(
         Uri.parse('$_baseUrl/test'),
@@ -17,13 +37,24 @@ class ApiService {
       print('Response body: ${response.body}');
     } catch (e) {
       print('Connection test error: $e');
+      throw Exception('Connection failed');
     }
   }
+
   static Future<User> register({
     required String name,
     required String email,
     required String password,
   }) async {
+    if (useMock) {
+      await _simulateNetworkDelay();
+      return _mockUser.copyWith(
+        name: name,
+        email: email,
+        password: password,
+      );
+    }
+
     try {
       final response = await http.post(
         Uri.parse('$_baseUrl/register'),
@@ -36,9 +67,8 @@ class ApiService {
       ).timeout(const Duration(seconds: 30));
 
       final data = jsonDecode(response.body);
-
       if (response.statusCode == 200) {
-        return User.fromJson(data['user']); // Убедитесь, что сервер возвращает 'user'
+        return User.fromJson(data['user']);
       } else {
         throw Exception(data['error'] ?? 'Ошибка регистрации');
       }
@@ -49,30 +79,36 @@ class ApiService {
   }
 
   static Future<User> login(String email, String password) async {
-    try {
-      print('[DEBUG] Sending login request with: email=$email, password=$password');
+    if (useMock) {
+      await _simulateNetworkDelay();
+      if (email == "test@test.com" && password == "123456") {
+        return _mockUser;
+      } else {
+        throw Exception("Неверный email или пароль");
+      }
+    }
 
+    try {
       final response = await http.post(
         Uri.parse('$_baseUrl/login'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email, 'password': password}),
       ).timeout(const Duration(seconds: 30));
 
-      print('[DEBUG] Server response: ${response.statusCode} - ${response.body}');
-
       final data = jsonDecode(response.body);
-      if (response.statusCode == 200) {
-        return User.fromJson(data['user']);
-      } else {
-        throw Exception(data['error'] ?? 'Ошибка входа');
-      }
+      return User.fromJson(data['user']);
     } catch (e) {
-      print('[ERROR] Login error: $e');
       rethrow;
     }
   }
 
+
   static Future<User> getProfile(String token) async {
+    if (useMock) {
+      await _simulateNetworkDelay();
+      return _mockUser;
+    }
+
     try {
       final response = await http.get(
         Uri.parse('$_baseUrl/profile'),
@@ -91,7 +127,7 @@ class ApiService {
     } on SocketException {
       throw Exception('Нет подключения к серверу');
     } catch (e) {
-      if (e is TimeoutException) {  // Проверяем тип исключения
+      if (e is TimeoutException) {
         throw Exception('Превышено время ожидания');
       }
       throw Exception('Ошибка: ${e.toString()}');
@@ -104,6 +140,17 @@ class ApiService {
     required String email,
     required String password,
   }) async {
+    if (useMock) {
+      await _simulateNetworkDelay();
+      return _mockUser.copyWith(
+        name: name,
+        email: email,
+        password: password,
+        familyId: "FAM${inviteCode.substring(0, 4)}",
+        role: UserRole.adult,
+      );
+    }
+
     try {
       final response = await http.post(
         Uri.parse('$_baseUrl/join-family'),
