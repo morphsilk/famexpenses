@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 import '../models/user.dart';
 
 class ApiService {
-  static const String _baseUrl = 'http://192.168.0.2';
+  static const String _baseUrl = 'http://172.20.10.2';
   static Future<void> testConnection() async {
     try {
       final response = await http.get(
