@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // Добавить
+import 'dart:convert'; // Добавить для jsonEncode/jsonDecode
 import 'main_screen.dart';
 import 'history_screen.dart';
 import 'analytics_screen.dart';
 import 'goals_budget_screen.dart';
+import 'family_management_screen.dart';
 import '../models/account.dart';
 import '../models/financial_goal.dart';
 import '../models/user.dart';
@@ -11,64 +14,157 @@ import '../models/family.dart';
 class MainNavigation extends StatefulWidget {
   final Family family;
 
-  MainNavigation({required this.family});
+  const MainNavigation({required this.family, Key? key}) : super(key: key);
 
   @override
   _MainNavigationState createState() => _MainNavigationState();
 }
 
 class _MainNavigationState extends State<MainNavigation> {
-  int _selectedIndex = 0;
-  late User currentUser;
+  int _currentTabIndex = 0;
+  late User _currentUser;
+  late Family _currentFamily;
 
   @override
   void initState() {
     super.initState();
-    currentUser = widget.family.users.first; // Пока берём первого
+    _currentFamily = widget.family;
+    _currentUser = _findCurrentUser(_currentFamily.users);
+    _loadFamilyState();
   }
 
-  void _onItemTapped(int index) {
+  Future<void> _loadFamilyState() async {
+    final prefs = await SharedPreferences.getInstance();
+    final familyJson = prefs.getString('family_state_${_currentFamily.id}');
+
+    if (familyJson != null) {
+      try {
+        final decoded = jsonDecode(familyJson);
+        final updatedFamily = Family.fromJson(decoded);
+        setState(() {
+          _currentFamily = updatedFamily;
+          _currentUser = _findCurrentUser(_currentFamily.users);
+        });
+      } catch (e) {
+        print('Ошибка загрузки состояния семьи: $e');
+      }
+    }
+  }
+
+  Future<void> _saveFamilyState() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      'family_state_${_currentFamily.id}',
+      jsonEncode(_currentFamily.toJson()),
+    );
+  }
+
+  User _findCurrentUser(List<User> familyUsers) {
+    try {
+      return familyUsers.firstWhere(
+            (user) => user.email == familyUsers.first.email,
+        orElse: () => familyUsers.first,
+      );
+    } catch (e) {
+      return User(
+        name: 'Гость',
+        email: '',
+        password: '',
+        familyId: '',
+        role: UserRole.adult,
+      );
+    }
+  }
+
+  void _onTabTapped(int index) {
     setState(() {
-      _selectedIndex = index;
+      _currentTabIndex = index;
     });
   }
 
-  void _addAccount(Account newAccount) {
+  void _handleAddAccount(Account newAccount) {
     setState(() {
-      widget.family.users.first.accounts.add(newAccount);
+      _currentUser.accounts.add(newAccount);
+      _saveFamilyState();
     });
   }
 
-  void _addFamilyMember(User newUser) {
+  void _handleRemoveFamilyMember(User user) {
     setState(() {
-      widget.family.users.add(newUser);
+      _currentFamily.users.removeWhere((u) => u.email == user.email);
+      _saveFamilyState();
     });
   }
 
-  List<Widget> get _screens {
-    final allAccounts = widget.family.users.expand((user) => user.accounts).toList();
-    final allGoals = widget.family.users.expand((user) => user.goals).toList();
-    final userAccounts = currentUser.role == UserRole.child ? currentUser.accounts : allAccounts;
-    final userGoals = currentUser.role == UserRole.child ? currentUser.goals : allGoals;
+  void _handleUpdateRole(User user, UserRole newRole) {
+    setState(() {
+      final index = _currentFamily.users.indexWhere((u) => u.email == user.email);
+      if (index != -1) {
+        _currentFamily.users[index] = user.copyWith(role: newRole);
+        _saveFamilyState();
+      }
+    });
+  }
+
+  void _handleAddFamilyMember(User newUser) {
+    setState(() {
+      _currentFamily.users.add(newUser);
+      _saveFamilyState();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${newUser.name} добавлен в семью')),
+      );
+    });
+  }
+
+  void _navigateToFamilyManagement() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FamilyManagementScreen(
+          familyUsers: _currentFamily.users,
+          onAddFamilyMember: _handleAddFamilyMember,
+          onRemoveFamilyMember: _handleRemoveFamilyMember,
+          onUpdateRole: _handleUpdateRole,
+        ),
+      ),
+    ).then((_) => _saveFamilyState());
+  }
+
+  List<Widget> _buildScreens() {
+    final familyAccounts = _currentUser.role == UserRole.child
+        ? _currentUser.accounts
+        : _currentFamily.users.expand((user) => user.accounts).toList();
+
+    final familyGoals = _currentUser.role == UserRole.child
+        ? _currentUser.goals
+        : _currentFamily.users.expand((user) => user.goals).toList();
 
     return [
       MainScreen(
-        accounts: userAccounts,
-        goals: userGoals,
-        onAddAccount: currentUser.role != UserRole.child ? _addAccount : null,
-        family: widget.family, // Передаём family
-        currentUser: currentUser, // Передаём currentUser
+        accounts: familyAccounts,
+        goals: familyGoals,
+        onAddAccount: _currentUser.role != UserRole.child ? _handleAddAccount : null,
+        family: _currentFamily,
+        currentUser: _currentUser,
+        onManageFamily: _currentUser.role == UserRole.admin ? _navigateToFamilyManagement : null,
       ),
-      HistoryScreen(accounts: userAccounts),
-      AnalyticsScreen(accounts: userAccounts),
-      GoalsBudgetScreen(accounts: userAccounts, goals: userGoals),
+      HistoryScreen(accounts: familyAccounts),
+      AnalyticsScreen(accounts: familyAccounts),
+      GoalsBudgetScreen(accounts: familyAccounts, goals: familyGoals),
     ];
   }
-
   @override
   Widget build(BuildContext context) {
+    final screens = _buildScreens();
+    final familyAccounts = _currentUser.role == UserRole.child
+        ? _currentUser.accounts
+        : _currentFamily.users.expand((user) => user.accounts).toList();
+
     return Scaffold(
-      body: _screens[_selectedIndex],
+      body: IndexedStack(
+        index: _currentTabIndex,
+        children: screens,
+      ),
       bottomNavigationBar: BottomNavigationBar(
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Главная'),
@@ -76,11 +172,16 @@ class _MainNavigationState extends State<MainNavigation> {
           BottomNavigationBarItem(icon: Icon(Icons.analytics), label: 'Аналитика'),
           BottomNavigationBarItem(icon: Icon(Icons.flag), label: 'Цели'),
         ],
-        currentIndex: _selectedIndex,
+        currentIndex: _currentTabIndex,
         selectedItemColor: Colors.blue,
         unselectedItemColor: Colors.grey,
-        onTap: _onItemTapped,
+        onTap: _onTabTapped,
+        type: BottomNavigationBarType.fixed,
       ),
     );
+  }
+  void dispose() {
+    _saveFamilyState();
+    super.dispose();
   }
 }
