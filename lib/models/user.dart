@@ -18,26 +18,6 @@ class User {
   List<Account> accounts;
   List<FinancialGoal> goals;
 
-  User copyWith({
-    String? name,
-    String? email,
-    String? password,
-    String? familyId,
-    UserRole? role,
-    List<Account>? accounts,
-    List<FinancialGoal>? goals,
-  }) {
-    return User(
-      name: name ?? this.name,
-      email: email ?? this.email,
-      password: password ?? this.password,
-      familyId: familyId ?? this.familyId,
-      role: role ?? this.role,
-      accounts: accounts ?? List.from(this.accounts),
-      goals: goals ?? List.from(this.goals),
-    );
-  }
-
   User({
     required this.name,
     required this.email,
@@ -52,12 +32,34 @@ class User {
     goals = List.from(goals);
   }
 
+  User copyWith({
+    String? name,
+    String? email,
+    String? password,
+    String? familyId,
+    UserRole? role,
+    String? token,
+    List<Account>? accounts,
+    List<FinancialGoal>? goals,
+  }) {
+    return User(
+      name: name ?? this.name,
+      email: email ?? this.email,
+      password: password ?? this.password,
+      familyId: familyId ?? this.familyId,
+      role: role ?? this.role,
+      token: token ?? this.token,
+      accounts: accounts ?? List.from(this.accounts),
+      goals: goals ?? List.from(this.goals),
+    );
+  }
+
   Map<String, dynamic> toJson() => {
     'name': name,
     'email': email,
     'password': password,
     'familyId': familyId,
-    'role': role.toString().split('.').last, // Сохраняем как строку
+    'role': role.toString().split('.').last,
     'accounts': accounts.map((account) => account.toJson()).toList(),
     'goals': goals.map((goal) => goal.toJson()).toList(),
     'token': token,
@@ -72,7 +74,7 @@ class User {
           (e) => e.toString().split('.').last == (json['role'] ?? 'adult'),
       orElse: () => UserRole.adult,
     ),
-    token: json['token'] ?? '',
+    token: json['token'],
   )..accounts = (json['accounts'] as List?)
       ?.map((a) => Account.fromJson(a))
       .toList() ?? []
