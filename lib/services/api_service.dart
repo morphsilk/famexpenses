@@ -11,7 +11,7 @@ class ApiService {
   static final User _mockUser = User(
     name: "Павел",
     email: "test@test.com",
-    password: "123456",
+    password: "pavel123",
     familyId: "",
     role: UserRole.admin,
   );
@@ -81,7 +81,7 @@ class ApiService {
   static Future<User> login(String email, String password) async {
     if (useMock) {
       await _simulateNetworkDelay();
-      if (email == "test@test.com" && password == "123456") {
+      if (email == "test@test.com" && password == "pavel123") {
         return _mockUser;
       } else {
         throw Exception("Неверный email или пароль");
