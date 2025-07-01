@@ -2,10 +2,17 @@ import 'package:flutter/material.dart';
 import '../models/account.dart';
 import '../models/account_history.dart';
 
-class BudgetCalculationScreen extends StatelessWidget {
+class BudgetCalculationScreen extends StatefulWidget {
   final List<Account> accounts;
 
   const BudgetCalculationScreen({required this.accounts});
+
+  @override
+  _BudgetCalculationScreenState createState() => _BudgetCalculationScreenState();
+}
+
+class _BudgetCalculationScreenState extends State<BudgetCalculationScreen> {
+  double _reservePercentage = 10.0; // Процент резерва по умолчанию
 
   // Рассчитывает основные финансовые показатели по формулам
   Map<String, dynamic> calculateBudgetMetrics() {
@@ -14,7 +21,7 @@ class BudgetCalculationScreen extends StatelessWidget {
     double plannedExpenses = 0;
     double unplannedExpenses = 0;
     double reserve = 0;
-    double alpha = 0.1;
+    double alpha = _reservePercentage / 100; // Используем выбранный процент
 
     Map<String, double> incomeByCategory = {
       'Зарплаты': 0,
@@ -23,17 +30,24 @@ class BudgetCalculationScreen extends StatelessWidget {
       'Другие': 0
     };
 
-    Map<String, double> expenseByCategory = {
+    // Группируем расходы по типам
+    Map<String, double> mandatoryExpensesByCategory = {
       'ЖКХ': 0,
       'Питание': 0,
       'Транспорт': 0,
       'Кредиты': 0,
       'Медицина': 0,
+    };
+
+    Map<String, double> plannedExpensesByCategory = {
       'Образование': 0,
       'Хобби': 0,
       'Красота': 0,
       'Супермаркеты': 0,
       'Подарки': 0,
+    };
+
+    Map<String, double> unplannedExpensesByCategory = {
       'Развлечения': 0,
       'Спорт': 0,
       'Одежда': 0,
@@ -41,7 +55,7 @@ class BudgetCalculationScreen extends StatelessWidget {
       'Прочее': 0
     };
 
-    for (final account in accounts) {
+    for (final account in widget.accounts) {
       for (final history in account.history) {
         final amount = history.amount;
         final category = history.category ?? '';
@@ -65,63 +79,63 @@ class BudgetCalculationScreen extends StatelessWidget {
 
           if (category == 'Жилье') {
             mandatoryExpenses += absAmount;
-            expenseByCategory['ЖКХ'] = expenseByCategory['ЖКХ']! + absAmount;
+            mandatoryExpensesByCategory['ЖКХ'] = mandatoryExpensesByCategory['ЖКХ']! + absAmount;
           }
           else if (category == 'Продукты') {
             mandatoryExpenses += absAmount;
-            expenseByCategory['Питание'] = expenseByCategory['Питание']! + absAmount;
+            mandatoryExpensesByCategory['Питание'] = mandatoryExpensesByCategory['Питание']! + absAmount;
           }
           else if (category == 'Транспорт') {
             mandatoryExpenses += absAmount;
-            expenseByCategory['Транспорт'] = expenseByCategory['Транспорт']! + absAmount;
+            mandatoryExpensesByCategory['Транспорт'] = mandatoryExpensesByCategory['Транспорт']! + absAmount;
           }
           else if (category == 'Кредиты') {
             mandatoryExpenses += absAmount;
-            expenseByCategory['Кредиты'] = expenseByCategory['Кредиты']! + absAmount;
+            mandatoryExpensesByCategory['Кредиты'] = mandatoryExpensesByCategory['Кредиты']! + absAmount;
           }
           else if (category == 'Здоровье') {
             mandatoryExpenses += absAmount;
-            expenseByCategory['Медицина'] = expenseByCategory['Медицина']! + absAmount;
+            mandatoryExpensesByCategory['Медицина'] = mandatoryExpensesByCategory['Медицина']! + absAmount;
           }
           else if (category == 'Образование') {
             plannedExpenses += absAmount;
-            expenseByCategory['Образование'] = expenseByCategory['Образование']! + absAmount;
+            plannedExpensesByCategory['Образование'] = plannedExpensesByCategory['Образование']! + absAmount;
           }
           else if (category == 'Хобби' || subcategory == 'Хобби') {
             plannedExpenses += absAmount;
-            expenseByCategory['Хобби'] = expenseByCategory['Хобби']! + absAmount;
+            plannedExpensesByCategory['Хобби'] = plannedExpensesByCategory['Хобби']! + absAmount;
           }
           else if (category == 'Красота') {
             plannedExpenses += absAmount;
-            expenseByCategory['Красота'] = expenseByCategory['Красота']! + absAmount;
+            plannedExpensesByCategory['Красота'] = plannedExpensesByCategory['Красота']! + absAmount;
           }
           else if (category == 'Супермаркеты/магазины') {
             plannedExpenses += absAmount;
-            expenseByCategory['Супермаркеты'] = expenseByCategory['Супермаркеты']! + absAmount;
+            plannedExpensesByCategory['Супермаркеты'] = plannedExpensesByCategory['Супермаркеты']! + absAmount;
           }
           else if (category == 'Подарки') {
             plannedExpenses += absAmount;
-            expenseByCategory['Подарки'] = expenseByCategory['Подарки']! + absAmount;
+            plannedExpensesByCategory['Подарки'] = plannedExpensesByCategory['Подарки']! + absAmount;
           }
           else if (category == 'Развлечения') {
             unplannedExpenses += absAmount;
-            expenseByCategory['Развлечения'] = expenseByCategory['Развлечения']! + absAmount;
+            unplannedExpensesByCategory['Развлечения'] = unplannedExpensesByCategory['Развлечения']! + absAmount;
           }
           else if (category == 'Спорт') {
             unplannedExpenses += absAmount;
-            expenseByCategory['Спорт'] = expenseByCategory['Спорт']! + absAmount;
+            unplannedExpensesByCategory['Спорт'] = unplannedExpensesByCategory['Спорт']! + absAmount;
           }
           else if (category == 'Одежда и обувь') {
             unplannedExpenses += absAmount;
-            expenseByCategory['Одежда'] = expenseByCategory['Одежда']! + absAmount;
+            unplannedExpensesByCategory['Одежда'] = unplannedExpensesByCategory['Одежда']! + absAmount;
           }
           else if (category == 'Маркетплейсы') {
             unplannedExpenses += absAmount;
-            expenseByCategory['Маркетплейсы'] = expenseByCategory['Маркетплейсы']! + absAmount;
+            unplannedExpensesByCategory['Маркетплейсы'] = unplannedExpensesByCategory['Маркетплейсы']! + absAmount;
           }
           else if (category == 'Прочее') {
             unplannedExpenses += absAmount;
-            expenseByCategory['Прочее'] = expenseByCategory['Прочее']! + absAmount;
+            unplannedExpensesByCategory['Прочее'] = unplannedExpensesByCategory['Прочее']! + absAmount;
           }
         }
       }
@@ -139,7 +153,9 @@ class BudgetCalculationScreen extends StatelessWidget {
       'minReserve': minReserve,
       'alpha': alpha,
       'incomeByCategory': incomeByCategory,
-      'expenseByCategory': expenseByCategory,
+      'mandatoryExpensesByCategory': mandatoryExpensesByCategory,
+      'plannedExpensesByCategory': plannedExpensesByCategory,
+      'unplannedExpensesByCategory': unplannedExpensesByCategory,
     };
   }
 
@@ -147,7 +163,9 @@ class BudgetCalculationScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final metrics = calculateBudgetMetrics();
     final incomeByCategory = metrics['incomeByCategory'] as Map<String, double>;
-    final expenseByCategory = metrics['expenseByCategory'] as Map<String, double>;
+    final mandatoryExpensesByCategory = metrics['mandatoryExpensesByCategory'] as Map<String, double>;
+    final plannedExpensesByCategory = metrics['plannedExpensesByCategory'] as Map<String, double>;
+    final unplannedExpensesByCategory = metrics['unplannedExpensesByCategory'] as Map<String, double>;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Расчет бюджета')),
@@ -157,6 +175,7 @@ class BudgetCalculationScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Доходы по категориям
               const Text(
                 'Доходы по категориям:',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -176,6 +195,7 @@ class BudgetCalculationScreen extends StatelessWidget {
               }).toList(),
               const SizedBox(height: 20),
 
+              // Основные метрики
               _buildMetricCard(
                 'Общий доход семьи',
                 metrics['totalIncome'] as double,
@@ -210,35 +230,136 @@ class BudgetCalculationScreen extends StatelessWidget {
                 (metrics['reserve'] as double) >= 0 ? Colors.green : Colors.red,
                 (metrics['reserve'] as double) >= 0 ? Icons.savings : Icons.error,
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
 
+              // Настройка резерва (перемещена сюда)
+              Card(
+                elevation: 4,
+                margin: const EdgeInsets.only(bottom: 24),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Настройка резерва:',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Размер резерва: ${_reservePercentage.toStringAsFixed(1)}%',
+                              style: const TextStyle(fontSize: 16),
+                            ),
+                          ),
+                          Icon(Icons.settings, color: Colors.blue),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Slider(
+                        value: _reservePercentage,
+                        min: 0,
+                        max: 50,
+                        divisions: 50,
+                        label: _reservePercentage.toStringAsFixed(1),
+                        onChanged: (value) {
+                          setState(() {
+                            _reservePercentage = value;
+                          });
+                        },
+                      ),
+                      Text(
+                        'Рекомендуемый резерв: ${(metrics['minReserve'] as double).toStringAsFixed(2)} руб.',
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Текущий резерв: ${(metrics['reserve'] as double).toStringAsFixed(2)} руб.',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: (metrics['reserve'] as double) >= (metrics['minReserve'] as double)
+                              ? Colors.green
+                              : Colors.red,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Анализ
               _buildAnalysisSection(metrics),
 
+              // Детализация расходов по группам
               const SizedBox(height: 24),
-              const Text(
-                'Детализация расходов:',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              _buildExpenseGroup(
+                'Обязательные расходы',
+                mandatoryExpensesByCategory,
+                Icons.lock_clock,
+                Colors.blue,
               ),
-              const SizedBox(height: 10),
-              ...expenseByCategory.entries.map((entry) {
-                if (entry.value > 0) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 8.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(entry.key),
-                        Text('${entry.value.toStringAsFixed(2)} руб.'),
-                      ],
-                    ),
-                  );
-                }
-                return const SizedBox.shrink();
-              }).toList(),
+              const SizedBox(height: 24),
+              _buildExpenseGroup(
+                'Запланированные расходы',
+                plannedExpensesByCategory,
+                Icons.calendar_month,
+                Colors.orange,
+              ),
+              const SizedBox(height: 24),
+              _buildExpenseGroup(
+                'Незапланированные расходы',
+                unplannedExpensesByCategory,
+                Icons.warning,
+                Colors.red,
+              ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildExpenseGroup(String title, Map<String, double> expenses, IconData icon, Color color) {
+    double total = expenses.values.fold(0, (sum, value) => sum + value);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, color: color, size: 28),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Text(
+          'Итого: ${total.toStringAsFixed(2)} руб.',
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 10),
+        ...expenses.entries.map((entry) {
+          if (entry.value > 0) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(entry.key),
+                  Text('${entry.value.toStringAsFixed(2)} руб.'),
+                ],
+              ),
+            );
+          }
+          return const SizedBox.shrink();
+        }).toList(),
+      ],
     );
   }
 
